@@ -12,9 +12,9 @@
 
 *Created by **[VIKRI AHPAD TANTOWI](https://github.com/vikri-ahpad-tantowi)***
 
-[![GitHub Stars](https://img.shields.io/github/stars/vikri-ahpad-tantowi/advanced-build-system?style=social)](https://github.com/vikri-ahpad-tantowi/advanced-build-system)
-[![GitHub Forks](https://img.shields.io/github/forks/vikri-ahpad-tantowi/advanced-build-system?style=social)](https://github.com/vikri-ahpad-tantowi/advanced-build-system)
-[![GitHub Issues](https://img.shields.io/github/issues/vikri-ahpad-tantowi/advanced-build-system?style=social)](https://github.com/vikri-ahpad-tantowi/advanced-build-system/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/MeViksry/advanced-build-system?style=social)](https://github.com/MeViksry/advanced-build-system)
+[![GitHub Forks](https://img.shields.io/github/forks/MeViksry/advanced-build-system?style=social)](https://github.com/MeViksry/advanced-build-system)
+[![GitHub Issues](https://img.shields.io/github/issues/MeViksry/advanced-build-system?style=social)](https://github.com/MeViksry/advanced-build-system/issues)
 
 </div>
 
