@@ -10,7 +10,7 @@
 
 **Professional-grade CSS & JavaScript build system with modern tooling**
 
-*Created by **[VIKRI AHPAD TANTOWI](https://github.com/vikri-ahpad-tantowi)***
+*Created by **[VIKRI AHPAD TANTOWI](https://github.com/MeViksry)***
 
 [![GitHub Stars](https://img.shields.io/github/stars/MeViksry/advanced-build-system?style=social)](https://github.com/MeViksry/advanced-build-system)
 [![GitHub Forks](https://img.shields.io/github/forks/MeViksry/advanced-build-system?style=social)](https://github.com/MeViksry/advanced-build-system)
