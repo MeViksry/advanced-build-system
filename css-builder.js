@@ -3,7 +3,6 @@ const path = require('path');
 const cssnano = require('cssnano');
 const postcss = require('postcss');
 const autoprefixer = require('autoprefixer');
-const purgecss = require('@fullhuman/postcss-purgecss');
 
 class CSSBuilder {
   constructor(config = {}) {
@@ -33,11 +32,16 @@ class CSSBuilder {
 
     // Add PurgeCSS if enabled
     if (this.config.purgeCSS) {
-      plugins.push(purgecss({
-        content: ['**/*.html', '**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx'],
-        defaultExtractor: content => content.match(/[\w-/:]+(?<!:)/g) || [],
-        ...this.config.purgeCSSOptions
-      }));
+      try {
+        const purgecss = require('@fullhuman/postcss-purgecss');
+        plugins.push(purgecss({
+          content: ['**/*.html', '**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx'],
+          defaultExtractor: content => content.match(/[\w-/:]+(?<!:)/g) || [],
+          ...this.config.purgeCSSOptions
+        }));
+      } catch (error) {
+        console.warn('⚠️  PurgeCSS not available, skipping...');
+      }
     }
 
     // Add cssnano for minification
@@ -63,7 +67,7 @@ class CSSBuilder {
   async processFile(inputFile, outputFile) {
     try {
       console.log(`📦 Processing: ${inputFile}`);
-
+      
       const inputCss = await fs.readFile(inputFile, 'utf8');
       const startTime = Date.now();
 
@@ -81,7 +85,7 @@ class CSSBuilder {
 
       // Write CSS file
       await fs.writeFile(outputFile, result.css);
-
+      
       // Write source map if enabled
       if (result.map && this.config.sourceMaps) {
         await fs.writeFile(`${outputFile}.map`, result.map.toString());
@@ -90,7 +94,7 @@ class CSSBuilder {
 
       const endTime = Date.now();
       const fileSize = Buffer.byteLength(result.css, 'utf8');
-
+      
       console.log(`✅ ${path.basename(outputFile)} created successfully!`);
       console.log(`   Size: ${(fileSize / 1024).toFixed(2)} KB`);
       console.log(`   Time: ${endTime - startTime}ms\n`);
@@ -163,88 +167,37 @@ class CSSBuilder {
   async watch() {
     if (!this.config.watch) return;
 
-    const chokidar = require('chokidar');
-    console.log(`👀 Watching ${this.config.inputDir} for changes...\n`);
+    try {
+      const chokidar = require('chokidar');
+      console.log(`👀 Watching ${this.config.inputDir} for changes...\n`);
 
-    const watcher = chokidar.watch(`${this.config.inputDir}/**/*.css`, {
-      ignored: /\.min\.css$/,
-      persistent: true
-    });
+      const watcher = chokidar.watch(`${this.config.inputDir}/**/*.css`, {
+        ignored: /\.min\.css$/,
+        persistent: true
+      });
 
-    watcher.on('change', async (filePath) => {
-      console.log(`🔄 File changed: ${filePath}`);
-      const fileName = path.basename(filePath);
-      await this.buildFile(fileName);
-    });
+      watcher.on('change', async (filePath) => {
+        console.log(`🔄 File changed: ${filePath}`);
+        const fileName = path.basename(filePath);
+        await this.buildFile(fileName);
+      });
 
-    watcher.on('add', async (filePath) => {
-      console.log(`➕ New file: ${filePath}`);
-      const fileName = path.basename(filePath);
-      await this.buildFile(fileName);
-    });
-  }
-}
-
-// Configuration examples
-const configs = {
-  // Basic configuration
-  basic: {
-    inputDir: 'css',
-    outputDir: 'dist',
-    sourceMaps: true
-  },
-
-  // Advanced configuration with PurgeCSS
-  advanced: {
-    inputDir: 'src/css',
-    outputDir: 'public/css',
-    sourceMaps: true,
-    autoprefixer: true,
-    purgeCSS: true,
-    purgeCSSOptions: {
-      content: ['src/**/*.html', 'src/**/*.js'],
-      safelist: ['active', 'hidden', /^btn-/]
-    }
-  },
-
-  // Production configuration
-  production: {
-    inputDir: 'assets/css',
-    outputDir: 'dist/css',
-    sourceMaps: false,
-    autoprefixer: true,
-    purgeCSS: true,
-    cssnanoOptions: {
-      preset: ['advanced', {
-        reduceIdents: false,
-        discardUnused: false
-      }]
+      watcher.on('add', async (filePath) => {
+        console.log(`➕ New file: ${filePath}`);
+        const fileName = path.basename(filePath);
+        await this.buildFile(fileName);
+      });
+    } catch (error) {
+      console.warn('⚠️  Watch mode not available (chokidar not installed)');
     }
   }
-};
-
-// Usage examples
-async function main() {
-  // Choose configuration
-  const config = configs.basic;
-  const builder = new CSSBuilder(config);
-
-  // Build specific files
-  await builder.buildFile('styles.css');
-  await builder.buildFile('vendor.css');
-
-  // Or build all CSS files
-  // await builder.buildAll();
-
-  // Enable watch mode for development
-  // await builder.watch();
 }
 
 // CLI support
 if (require.main === module) {
   const args = process.argv.slice(2);
   const command = args[0];
-
+  
   const builder = new CSSBuilder({
     watch: args.includes('--watch'),
     sourceMaps: !args.includes('--no-maps'),
