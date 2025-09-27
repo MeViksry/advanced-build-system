@@ -80,7 +80,7 @@ npm --version   # >= 6.0.0
 
 ```bash
 # Clone the repository
-git clone https://github.com/vikri-ahpad-tantowi/advanced-build-system.git
+git clone https://github.com/MeViksry/advanced-build-system
 cd advanced-build-system
 
 # Install dependencies
