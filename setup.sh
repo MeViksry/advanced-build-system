@@ -1,15 +1,79 @@
 #!/bin/bash
 
-echo "🚀 Setting up Advanced Build System..."
-echo ""
+# Function to display the main menu
+show_menu() {
+    echo "========================================="
+    echo "   🚀 Advanced Build System Manager   "
+    echo "========================================="
+    echo "What would you like to do?"
+    echo ""
+    PS3="👉 Please enter your choice: "
+    options=(
+        "Install Dependencies"
+        "Run Development Build"
+        "Run Production Build"
+        "Start Development Watch Mode"
+        "Clean Project"
+        "Re-run Initial File Setup"
+        "Exit"
+    )
+    select opt in "${options[@]}"
+    do
+        case $opt in
+            "Install Dependencies")
+                echo "📦 Installing dependencies..."
+                npm install
+                echo "✅ All dependencies installed."
+                break
+                ;;
+            "Run Development Build")
+                echo "🛠️  Running development build..."
+                npm run build
+                break
+                ;;
+            "Run Production Build")
+                echo "🏭 Running production build..."
+                npm run build:production
+                break
+                ;;
+            "Start Development Watch Mode")
+                echo "👀 Starting development watch mode... (Press Ctrl+C to stop)"
+                npm run dev
+                break
+                ;;
+            "Clean Project")
+                echo "🧹 Cleaning project..."
+                npm run clean
+                echo "✅ Project cleaned."
+                break
+                ;;
+            "Re-run Initial File Setup")
+                echo "🔄 Re-running initial project setup..."
+                initial_setup
+                echo "✅ File setup complete. Please choose 'Install Dependencies' if you haven't already."
+                break
+                ;;
+            "Exit")
+                echo "👋 Goodbye!"
+                exit 0
+                ;;
+            *) echo "❌ Invalid option $REPLY";;
+        esac
+    done
+}
 
-# Create directories
-echo "📁 Creating directories..."
-mkdir -p css js dist
-
-# Create CSS files
-echo "🎨 Creating CSS files..."
-
+# Function for the initial setup of files and directories
+initial_setup() {
+    echo "🚀 Setting up Advanced Build System files..."
+    echo ""
+    
+    # Create directories
+    echo "📁 Creating directories..."
+    mkdir -p css js
+    
+    # Create CSS files
+    echo "🎨 Creating CSS files..."
+    # (The content of your css files is placed here)
 cat > css/styles.css << 'EOF'
 /* Main Styles */
 :root {
@@ -109,7 +173,6 @@ body {
   }
 }
 EOF
-
 cat > css/vendor.css << 'EOF'
 /* Vendor/Library styles */
 .animate__animated {
@@ -178,9 +241,9 @@ cat > css/vendor.css << 'EOF'
 }
 EOF
 
-# Create JS files
-echo "⚡ Creating JavaScript files..."
-
+    # Create JS files
+    echo "⚡ Creating JavaScript files..."
+    # (The content of your js files is placed here)
 cat > js/main.js << 'EOF'
 // Main Application JavaScript
 class App {
@@ -389,7 +452,6 @@ const app = new App();
 // Export for global access
 window.App = app;
 EOF
-
 cat > js/plugins.js << 'EOF'
 // Third-party plugins and utilities
 (function(window) {
@@ -517,10 +579,10 @@ cat > js/plugins.js << 'EOF'
 })(window);
 EOF
 
-# Create HTML file
-echo "🌐 Creating HTML file..."
+    # Create HTML source file
+    echo "🌐 Creating HTML source file (index.source.html)..."
 
-cat > index.html << 'EOF'
+    cat > index.source.html << 'EOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -543,6 +605,15 @@ cat > index.html << 'EOF'
         <div class="content">
             <div class="grid">
                 <div class="card">
+                    <h3>HTML Features</h3>
+                    <p>✅ HTML-Minifier</p>
+                    <p>✅ Aggressive Minification</p>
+                    <p>✅ Whitespace Collapsing</p>
+                    <p>✅ Comment Removal</p>
+                    <p>✅ Source-to-Root Build</p>
+                </div>
+            
+                <div class="card">
                     <h3>CSS Features</h3>
                     <p>✅ PostCSS Processing</p>
                     <p>✅ Autoprefixer</p>
@@ -559,23 +630,14 @@ cat > index.html << 'EOF'
                     <p>✅ Source Maps</p>
                     <p>✅ ES6+ Support</p>
                 </div>
-
-                <div class="card">
-                    <h3>Development Tools</h3>
-                    <p>✅ Watch Mode</p>
-                    <p>✅ Parallel Processing</p>
-                    <p>✅ Error Handling</p>
-                    <p>✅ Build Statistics</p>
-                    <p>✅ CLI Support</p>
-                </div>
             </div>
 
             <div class="card">
                 <h3>🚀 Quick Commands</h3>
+                <p>Use <code>./setup.sh</code> for an interactive menu!</p>
                 <p><code>npm run build</code> - Build all files</p>
                 <p><code>npm run build:production</code> - Production build</p>
                 <p><code>npm run dev</code> - Development with watch</p>
-                <p><code>npm run clean</code> - Clean dist folder</p>
             </div>
         </div>
     </div>
@@ -587,8 +649,6 @@ cat > index.html << 'EOF'
 EOF
 
 echo ""
-echo "✅ Setup completed successfully!"
-echo ""
 echo "📁 Project structure:"
 echo "├── css/"
 echo "│   ├── styles.css      (Main styles)"
@@ -597,15 +657,28 @@ echo "├── js/"
 echo "│   ├── main.js         (Main application)"
 echo "│   └── plugins.js      (Utilities & plugins)"
 echo "├── dist/               (Build output - will be created)"
-echo "├── index.html          (Test page)"
+echo "├── index.html          (Test page & Minify html)"
 echo "├── package.json        (Dependencies & scripts)"
 echo "├── css-builder.js      (CSS build system)"
 echo "├── js-builder.js       (JS build system)"
-echo "└── index.js            (Main build system)"
+echo "├── index.js            (Main build system)"
+echo "└── html-builder.js
 echo ""
-echo "🎯 Next steps:"
-echo "1. npm install          (Install dependencies)"
-echo "2. npm run build        (Build all files)"
-echo "3. Open index.html      (View result)"
-echo ""
-echo "🎉 Happy building!"
+echo "✅ File and directory setup completed successfully!"
+}
+
+# --- Main Script Logic ---
+
+# Check if it's the first run by looking for a key file
+if [ ! -f "index.source.html" ]; then
+    initial_setup
+    echo ""
+    echo "🎯 First-time setup complete!"
+    echo "   Next, choose 'Install Dependencies' from the menu to get started."
+    echo ""
+fi
+
+# Loop to show the menu until the user exits
+while true; do
+    show_menu
+done
