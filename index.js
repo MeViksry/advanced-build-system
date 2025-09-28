@@ -1,348 +1,271 @@
 const fs = require('fs').promises;
 const path = require('path');
-const { minify } = require('terser');
+const CSSBuilder = require('./css-builder');
+const JSBuilder = require('./js-builder');
+const HTMLBuilder = require('./html-builder');
 
-class JSBuilder {
+class AdvancedBuildSystem {
   constructor(config = {}) {
     this.config = {
-      inputDir: config.inputDir || 'js',
-      outputDir: config.outputDir || 'dist',
-      sourceMaps: config.sourceMaps !== false,
-      minify: config.minify !== false,
-      babel: config.babel !== false,
-      bundle: config.bundle || false,
+      production: config.production || false,
       watch: config.watch || false,
-      target: config.target || 'es5',
-      format: config.format || 'iife',
-      globalName: config.globalName || 'App',
+      clean: config.clean !== false,
+      parallel: config.parallel !== false,
+      sourceMaps: config.sourceMaps !== false,
       ...config
     };
 
-    this.terserOptions = this.getTerserOptions();
+    // Initialize builders
+    this.cssBuilder = new CSSBuilder({
+      ...this.config.css,
+      production: this.config.production,
+      watch: this.config.watch,
+      sourceMaps: this.config.sourceMaps
+    });
+
+    this.jsBuilder = new JSBuilder({
+      ...this.config.js,
+      production: this.config.production,
+      watch: this.config.watch,
+      sourceMaps: this.config.sourceMaps
+    });
+
+    this.htmlBuilder = new HTMLBuilder({
+      ...this.config.html,
+      production: this.config.production,
+      watch: this.config.watch,
+      sourceMaps: this.config.sourceMaps
+    });
   }
 
-  getTerserOptions() {
-    return {
-      compress: {
-        drop_console: this.config.production,
-        drop_debugger: this.config.production,
-        pure_funcs: this.config.production ? ['console.log', 'console.info'] : [],
-        passes: 2,
-        ...this.config.terserCompress
-      },
-      mangle: {
-        toplevel: this.config.production,
-        ...this.config.terserMangle
-      },
-      format: {
-        comments: this.config.production ? false : 'some',
-        ...this.config.terserFormat
-      },
-      sourceMap: this.config.sourceMaps ? {
-        includeSources: true,
-        ...this.config.terserSourceMap
-      } : false,
-      ...this.config.terserOptions
-    };
-  }
+  async cleanBuildDirectories() {
+    if (!this.config.clean) return;
 
-  async ensureDirectoryExists(dirPath) {
+    console.log('🧹 Cleaning build directories...');
+    
     try {
-      await fs.access(dirPath);
-    } catch {
-      await fs.mkdir(dirPath, { recursive: true });
+      const filesToRemove = ['*.min.html', '*.min.html.map'];
+      const distPath = 'dist';
+
+      // Clean HTML files in root
+      const files = await fs.readdir('.');
+      for (const file of files) {
+        if (file.endsWith('.min.html') || file.endsWith('.min.html.map')) {
+          await fs.unlink(file);
+          console.log(`   🗑️  Removed: ${file}`);
+        }
+      }
+
+      // Clean dist directory
+      try {
+        await fs.access(distPath);
+        const distFiles = await fs.readdir(distPath);
+        
+        for (const file of distFiles) {
+          const filePath = path.join(distPath, file);
+          const stats = await fs.stat(filePath);
+          
+          if (stats.isFile()) {
+            await fs.unlink(filePath);
+            console.log(`   🗑️  Removed: ${filePath}`);
+          }
+        }
+      } catch {
+        // Dist directory doesn't exist, that's fine
+      }
+
+      console.log('✅ Clean completed!\n');
+    } catch (error) {
+      console.warn('⚠️  Clean failed:', error.message);
     }
   }
 
-  async transpileWithBabel(code, filename) {
-    if (!this.config.babel) return code;
+  async buildSequential() {
+    console.log('🔄 Running sequential build...\n');
+    const startTime = Date.now();
 
     try {
-      const babel = require('@babel/core');
-      const result = await babel.transformAsync(code, {
-        presets: [
-          ['@babel/preset-env', {
-            targets: this.config.target === 'modern' ? {
-              esmodules: true
-            } : {
-              ie: '11',
-              chrome: '60',
-              firefox: '60',
-              safari: '10'
-            },
-            modules: false
-          }]
-        ],
-        sourceMaps: this.config.sourceMaps,
-        filename
-      });
-      return result.code;
+      // Build CSS first
+      console.log('🎨 Building CSS...');
+      await this.cssBuilder.buildAll();
+
+      // Build JavaScript second
+      console.log('⚡ Building JavaScript...');
+      await this.jsBuilder.buildAll();
+
+      // Build HTML last
+      console.log('🌐 Building HTML...');
+      await this.htmlBuilder.buildAll();
+
+      const totalTime = Date.now() - startTime;
+      console.log('📊 Sequential Build Summary:');
+      console.log(`   🎨 CSS: ✅ Completed`);
+      console.log(`   ⚡ JS: ✅ Completed`);
+      console.log(`   🌐 HTML: ✅ Completed`);
+      console.log(`   ⏱️  Total time: ${totalTime}ms\n`);
+
     } catch (error) {
-      console.warn(`⚠️  Babel not available, skipping transpilation...`);
-      return code;
-    }
-  }
-
-  async minifyCode(code, filename) {
-    if (!this.config.minify) return { code };
-
-    try {
-      const result = await minify(code, {
-        ...this.terserOptions,
-        sourceMap: this.config.sourceMaps ? {
-          filename: path.basename(filename),
-          url: path.basename(filename) + '.map',
-          ...this.terserOptions.sourceMap
-        } : false
-      });
-
-      return result;
-    } catch (error) {
-      console.error(`❌ Minification failed for ${filename}:`, error.message);
-      return { code };
-    }
-  }
-
-  async bundleWithRollup(inputFile, outputFile) {
-    try {
-      const rollup = require('rollup');
-      const { nodeResolve } = require('@rollup/plugin-node-resolve');
-      const commonjs = require('@rollup/plugin-commonjs');
-      const replace = require('@rollup/plugin-replace');
-
-      console.log(`📦 Bundling: ${inputFile}`);
-
-      const bundle = await rollup.rollup({
-        input: inputFile,
-        plugins: [
-          replace({
-            'process.env.NODE_ENV': JSON.stringify(this.config.production ? 'production' : 'development'),
-            preventAssignment: true
-          }),
-          nodeResolve({
-            browser: true,
-            preferBuiltins: false
-          }),
-          commonjs()
-        ],
-        external: this.config.external || []
-      });
-
-      const { output } = await bundle.generate({
-        format: this.config.format,
-        name: this.config.globalName,
-        sourcemap: this.config.sourceMaps,
-        compact: this.config.minify
-      });
-
-      await bundle.close();
-      return output[0];
-    } catch (error) {
-      console.warn('⚠️  Rollup not available, using simple bundling...');
+      console.error('❌ Sequential build failed:', error.message);
       throw error;
     }
   }
 
-  async processFile(inputFile, outputFile) {
+  async buildParallel() {
+    console.log('🔄 Running parallel build...\n');
+    const startTime = Date.now();
+
     try {
-      console.log(`📦 Processing: ${inputFile}`);
-      const startTime = Date.now();
-      
-      let code;
-      let map = null;
+      // Run all builds in parallel
+      const results = await Promise.allSettled([
+        this.cssBuilder.buildAll(),
+        this.jsBuilder.buildAll(),
+        this.htmlBuilder.buildAll()
+      ]);
 
-      if (this.config.bundle) {
-        // Use Rollup for bundling
-        try {
-          const result = await this.bundleWithRollup(inputFile, outputFile);
-          code = result.code;
-          map = result.map;
-        } catch {
-          // Fallback to simple processing if Rollup fails
-          code = await fs.readFile(inputFile, 'utf8');
-        }
-      } else {
-        // Simple file processing
-        code = await fs.readFile(inputFile, 'utf8');
-      }
-      
-      // Babel transpilation
-      if (this.config.babel) {
-        code = await this.transpileWithBabel(code, inputFile);
-      }
+      const totalTime = Date.now() - startTime;
+      const cssResult = results[0].status === 'fulfilled' ? '✅' : '❌';
+      const jsResult = results[1].status === 'fulfilled' ? '✅' : '❌';
+      const htmlResult = results[2].status === 'fulfilled' ? '✅' : '❌';
 
-      // Minification
-      if (this.config.minify) {
-        const minifyResult = await this.minifyCode(code, outputFile);
-        code = minifyResult.code;
-        if (!map && minifyResult.map) {
-          map = minifyResult.map;
-        }
+      console.log('📊 Parallel Build Summary:');
+      console.log(`   🎨 CSS: ${cssResult} ${results[0].status === 'fulfilled' ? 'Success' : 'Failed'}`);
+      console.log(`   ⚡ JS: ${jsResult} ${results[1].status === 'fulfilled' ? 'Success' : 'Failed'}`);
+      console.log(`   🌐 HTML: ${htmlResult} ${results[2].status === 'fulfilled' ? 'Success' : 'Failed'}`);
+      console.log(`   ⏱️  Total time: ${totalTime}ms\n`);
+
+      // Check for failures
+      const failures = results.filter(r => r.status === 'rejected');
+      if (failures.length > 0) {
+        console.warn('⚠️  Some builds failed:');
+        failures.forEach((failure, index) => {
+          const type = ['CSS', 'JS', 'HTML'][index];
+          console.warn(`   ${type}: ${failure.reason.message}`);
+        });
       }
 
-      // Ensure output directory exists
-      await this.ensureDirectoryExists(path.dirname(outputFile));
-
-      // Write JavaScript file
-      await fs.writeFile(outputFile, code);
-      
-      // Write source map if available
-      if (map && this.config.sourceMaps) {
-        const mapString = typeof map === 'string' ? map : JSON.stringify(map);
-        await fs.writeFile(`${outputFile}.map`, mapString);
-        console.log(`✅ Source map created: ${outputFile}.map`);
-      }
-
-      const endTime = Date.now();
-      const fileSize = Buffer.byteLength(code, 'utf8');
-      
-      console.log(`✅ ${path.basename(outputFile)} created successfully!`);
-      console.log(`   Size: ${(fileSize / 1024).toFixed(2)} KB`);
-      console.log(`   Time: ${endTime - startTime}ms\n`);
-
-      return { code, map };
     } catch (error) {
-      console.error(`❌ Error processing ${inputFile}:`, error.message);
+      console.error('❌ Parallel build failed:', error.message);
       throw error;
     }
   }
 
-  async buildFile(fileName) {
-    const inputFile = path.join(this.config.inputDir, fileName);
-    // PERBAIKAN: Selalu tambahkan .min untuk output jika minify enabled
-    const outputFileName = fileName.replace('.js', '.min.js');
-    const outputFile = path.join(this.config.outputDir, outputFileName);
+  async buildAll() {
+    console.log('🚀 Starting complete build process...\n');
 
+    // Clean if enabled
+    if (this.config.clean) {
+      await this.cleanBuildDirectories();
+    }
+
+    // Choose build strategy
+    if (this.config.parallel) {
+      await this.buildParallel();
+    } else {
+      await this.buildSequential();
+    }
+
+    console.log('🎉 Build completed successfully!');
+  }
+
+  async watch() {
+    console.log('👀 Starting watch mode...\n');
+
+    // Initial build
+    await this.buildAll();
+
+    console.log('👀 Watching for file changes... (Press Ctrl+C to stop)\n');
+
+    // Start all watchers
+    await Promise.all([
+      this.cssBuilder.watch(),
+      this.jsBuilder.watch(),
+      this.htmlBuilder.watch()
+    ]);
+  }
+
+  async getProjectStats() {
     try {
-      await fs.access(inputFile);
-      return await this.processFile(inputFile, outputFile);
-    } catch {
-      console.warn(`⚠️  File not found: ${inputFile}`);
+      const stats = {
+        css: { files: 0, size: 0 },
+        js: { files: 0, size: 0 },
+        html: { files: 0, size: 0 },
+        dist: { files: 0, size: 0 }
+      };
+
+      // CSS stats
+      try {
+        const cssFiles = await fs.readdir('css');
+        stats.css.files = cssFiles.filter(f => f.endsWith('.css')).length;
+        for (const file of cssFiles) {
+          if (file.endsWith('.css')) {
+            const filePath = path.join('css', file);
+            const stat = await fs.stat(filePath);
+            stats.css.size += stat.size;
+          }
+        }
+      } catch {}
+
+      // JS stats  
+      try {
+        const jsFiles = await fs.readdir('js');
+        stats.js.files = jsFiles.filter(f => f.endsWith('.js')).length;
+        for (const file of jsFiles) {
+          if (file.endsWith('.js')) {
+            const filePath = path.join('js', file);
+            const stat = await fs.stat(filePath);
+            stats.js.size += stat.size;
+          }
+        }
+      } catch {}
+
+      // HTML stats
+      try {
+        const files = await fs.readdir('.');
+        const htmlFiles = files.filter(f => f.endsWith('.html') && !f.endsWith('.min.html'));
+        stats.html.files = htmlFiles.length;
+        for (const file of htmlFiles) {
+          const stat = await fs.stat(file);
+          stats.html.size += stat.size;
+        }
+      } catch {}
+
+      // Dist stats
+      try {
+        const distFiles = await fs.readdir('dist');
+        stats.dist.files = distFiles.length;
+        for (const file of distFiles) {
+          const filePath = path.join('dist', file);
+          const stat = await fs.stat(filePath);
+          stats.dist.size += stat.size;
+        }
+      } catch {}
+
+      return stats;
+    } catch (error) {
+      console.error('❌ Failed to get project stats:', error.message);
       return null;
     }
   }
 
-  async bundleApp(entryPoint = 'main.js') {
-    const inputFile = path.join(this.config.inputDir, entryPoint);
-    const outputFileName = this.config.minify 
-      ? 'bundle.min.js' 
-      : 'bundle.js';
-    const outputFile = path.join(this.config.outputDir, outputFileName);
+  async showStats() {
+    console.log('📈 Getting project statistics...\n');
 
-    return await this.processFile(inputFile, outputFile);
-  }
+    const stats = await this.getProjectStats();
+    if (!stats) return;
 
-  async buildAll() {
-    console.log('🚀 Starting JavaScript build process...\n');
-    const startTime = Date.now();
-
-    try {
-      // Ensure input directory exists
-      await fs.access(this.config.inputDir);
-    } catch {
-      console.error(`❌ Input directory not found: ${this.config.inputDir}`);
-      return;
-    }
-
-    try {
-      if (this.config.bundle) {
-        // Bundle mode - create single bundle
-        await this.bundleApp(this.config.entry || 'main.js');
-      } else {
-        // Individual file processing mode
-        const files = await fs.readdir(this.config.inputDir);
-        const jsFiles = files.filter(file => 
-          file.endsWith('.js') && !file.endsWith('.min.js')
-        );
-
-        if (jsFiles.length === 0) {
-          console.warn('⚠️  No JavaScript files found in input directory');
-          return;
-        }
-
-        console.log(`📁 Found ${jsFiles.length} JavaScript files: ${jsFiles.join(', ')}`);
-
-        // Process files in parallel
-        const results = await Promise.allSettled(
-          jsFiles.map(file => this.buildFile(file))
-        );
-
-        // Summary
-        const successful = results.filter(r => r.status === 'fulfilled' && r.value !== null).length;
-        const failed = results.filter(r => r.status === 'rejected' || r.value === null).length;
-        
-        console.log('📊 Build Summary:');
-        console.log(`   ✅ Successful: ${successful}`);
-        if (failed > 0) console.log(`   ❌ Failed: ${failed}`);
-      }
-
-      const totalTime = Date.now() - startTime;
-      console.log(`   ⏱️  Total time: ${totalTime}ms`);
-
-    } catch (error) {
-      console.error('❌ Build failed:', error.message);
-    }
-  }
-
-  async watch() {
-    if (!this.config.watch) return;
-
-    try {
-      const chokidar = require('chokidar');
-      console.log(`👀 Watching ${this.config.inputDir} for changes...\n`);
-
-      const watcher = chokidar.watch(`${this.config.inputDir}/**/*.js`, {
-        ignored: /\.min\.js$/,
-        persistent: true
-      });
-
-      watcher.on('change', async (filePath) => {
-        console.log(`🔄 File changed: ${filePath}`);
-        
-        if (this.config.bundle) {
-          await this.bundleApp();
-        } else {
-          const fileName = path.basename(filePath);
-          await this.buildFile(fileName);
-        }
-      });
-
-      watcher.on('add', async (filePath) => {
-        console.log(`➕ New file: ${filePath}`);
-        
-        if (!this.config.bundle) {
-          const fileName = path.basename(filePath);
-          await this.buildFile(fileName);
-        }
-      });
-    } catch (error) {
-      console.warn('⚠️  Watch mode not available (chokidar not installed)');
-    }
-  }
-
-  // Utility method for code analysis
-  async analyzeBundle(filePath) {
-    try {
-      const code = await fs.readFile(filePath, 'utf8');
-      const stats = {
-        size: Buffer.byteLength(code, 'utf8'),
-        lines: code.split('\n').length,
-        functions: (code.match(/function\s+\w+/g) || []).length,
-        classes: (code.match(/class\s+\w+/g) || []).length,
-        imports: (code.match(/import\s+.+from/g) || []).length
-      };
-
-      console.log('📈 Bundle Analysis:');
-      console.log(`   Size: ${(stats.size / 1024).toFixed(2)} KB`);
-      console.log(`   Lines: ${stats.lines}`);
-      console.log(`   Functions: ${stats.functions}`);
-      console.log(`   Classes: ${stats.classes}`);
-      console.log(`   Imports: ${stats.imports}`);
-
-      return stats;
-    } catch (error) {
-      console.error('❌ Analysis failed:', error.message);
-    }
+    console.log('📊 Project Statistics:');
+    console.log(`   🎨 CSS Files: ${stats.css.files} (${(stats.css.size / 1024).toFixed(2)} KB)`);
+    console.log(`   ⚡ JS Files: ${stats.js.files} (${(stats.js.size / 1024).toFixed(2)} KB)`);
+    console.log(`   🌐 HTML Files: ${stats.html.files} (${(stats.html.size / 1024).toFixed(2)} KB)`);
+    console.log(`   📦 Built Files: ${stats.dist.files} (${(stats.dist.size / 1024).toFixed(2)} KB)`);
+    
+    const totalSource = stats.css.size + stats.js.size + stats.html.size;
+    const totalBuilt = stats.dist.size;
+    const compressionRatio = totalSource > 0 ? ((totalSource - totalBuilt) / totalSource * 100).toFixed(1) : 0;
+    
+    console.log(`   📊 Total Source: ${(totalSource / 1024).toFixed(2)} KB`);
+    console.log(`   🗜️  Total Built: ${(totalBuilt / 1024).toFixed(2)} KB`);
+    console.log(`   💾 Compression: ${compressionRatio}% saved`);
   }
 }
 
@@ -350,39 +273,71 @@ class JSBuilder {
 if (require.main === module) {
   const args = process.argv.slice(2);
   const command = args[0];
-  
-  const builder = new JSBuilder({
+
+  const buildSystem = new AdvancedBuildSystem({
+    production: args.includes('--production'),
     watch: args.includes('--watch'),
-    bundle: args.includes('--bundle'),
+    clean: args.includes('--clean'),
+    parallel: !args.includes('--sequential'),
     sourceMaps: !args.includes('--no-maps'),
-    minify: !args.includes('--no-minify'), // PERBAIKAN: Default minify adalah true
-    production: args.includes('--production')
+    
+    // CSS specific options
+    css: {
+      purgeCSS: args.includes('--purge')
+    },
+    
+    // JS specific options  
+    js: {
+      bundle: args.includes('--bundle'),
+      minify: !args.includes('--no-minify')
+    },
+    
+    // HTML specific options
+    html: {
+      obfuscate: args.includes('--obfuscate')
+    }
   });
 
   switch (command) {
     case 'build':
-      builder.buildAll();
-      break;
-    case 'bundle':
-      builder.bundleApp();
+      buildSystem.buildAll();
       break;
     case 'watch':
-      builder.buildAll().then(() => builder.watch());
+      buildSystem.watch();
       break;
-    case 'analyze':
-      const file = args[1] || 'dist/bundle.min.js';
-      builder.analyzeBundle(file);
+    case 'stats':
+      buildSystem.showStats();
+      break;
+    case 'clean':
+      buildSystem.cleanBuildDirectories();
       break;
     default:
-      console.log('Usage: node js-builder.js [build|bundle|watch|analyze] [options]');
+      console.log('🛠️  Advanced Build System v2.0');
+      console.log('Usage: node index.js [command] [options]');
+      console.log('');
+      console.log('Commands:');
+      console.log('  build       Build all files (CSS, JS, HTML)');
+      console.log('  watch       Watch mode with auto-rebuild');
+      console.log('  stats       Show project statistics');
+      console.log('  clean       Clean build directories');
+      console.log('');
       console.log('Options:');
-      console.log('  --production    Production build');
-      console.log('  --watch        Enable watch mode');
-      console.log('  --bundle       Bundle files');
-      console.log('  --no-maps      Disable source maps');
-      console.log('  --no-minify    Disable minification');
+      console.log('  --production    Production build with full optimization');
+      console.log('  --watch         Enable watch mode');
+      console.log('  --clean         Clean before build');
+      console.log('  --sequential    Use sequential build instead of parallel');
+      console.log('  --no-maps       Disable source maps');
+      console.log('  --purge         Enable PurgeCSS for CSS');
+      console.log('  --bundle        Bundle JavaScript files');
+      console.log('  --no-minify     Disable minification');
+      console.log('  --obfuscate     Obfuscate HTML class names and IDs');
+      console.log('');
+      console.log('Examples:');
+      console.log('  node index.js build --production --clean');
+      console.log('  node index.js watch --purge');
+      console.log('  node index.js build --bundle --obfuscate');
       break;
   }
 }
 
-module.exports = JSBuilder;
+module.exports = AdvancedBuildSystem;
