@@ -175,7 +175,9 @@ class JSBuilder {
       if (this.config.minify) {
         const minifyResult = await this.minifyCode(code, outputFile);
         code = minifyResult.code;
-        if (!map) map = minifyResult.map;
+        if (!map && minifyResult.map) {
+          map = minifyResult.map;
+        }
       }
 
       // Ensure output directory exists
@@ -186,7 +188,8 @@ class JSBuilder {
       
       // Write source map if available
       if (map && this.config.sourceMaps) {
-        await fs.writeFile(`${outputFile}.map`, map);
+        const mapString = typeof map === 'string' ? map : JSON.stringify(map);
+        await fs.writeFile(`${outputFile}.map`, mapString);
         console.log(`✅ Source map created: ${outputFile}.map`);
       }
 
@@ -206,9 +209,8 @@ class JSBuilder {
 
   async buildFile(fileName) {
     const inputFile = path.join(this.config.inputDir, fileName);
-    const outputFileName = this.config.minify 
-      ? fileName.replace('.js', '.min.js')
-      : fileName;
+    // PERBAIKAN: Selalu tambahkan .min untuk output jika minify enabled
+    const outputFileName = fileName.replace('.js', '.min.js');
     const outputFile = path.join(this.config.outputDir, outputFileName);
 
     try {
@@ -258,14 +260,16 @@ class JSBuilder {
           return;
         }
 
+        console.log(`📁 Found ${jsFiles.length} JavaScript files: ${jsFiles.join(', ')}`);
+
         // Process files in parallel
         const results = await Promise.allSettled(
           jsFiles.map(file => this.buildFile(file))
         );
 
         // Summary
-        const successful = results.filter(r => r.status === 'fulfilled').length;
-        const failed = results.filter(r => r.status === 'rejected').length;
+        const successful = results.filter(r => r.status === 'fulfilled' && r.value !== null).length;
+        const failed = results.filter(r => r.status === 'rejected' || r.value === null).length;
         
         console.log('📊 Build Summary:');
         console.log(`   ✅ Successful: ${successful}`);
@@ -351,7 +355,7 @@ if (require.main === module) {
     watch: args.includes('--watch'),
     bundle: args.includes('--bundle'),
     sourceMaps: !args.includes('--no-maps'),
-    minify: args.includes('--minify') || args.includes('--production'),
+    minify: !args.includes('--no-minify'), // PERBAIKAN: Default minify adalah true
     production: args.includes('--production')
   });
 
@@ -376,7 +380,7 @@ if (require.main === module) {
       console.log('  --watch        Enable watch mode');
       console.log('  --bundle       Bundle files');
       console.log('  --no-maps      Disable source maps');
-      console.log('  --minify       Force minification');
+      console.log('  --no-minify    Disable minification');
       break;
   }
 }
