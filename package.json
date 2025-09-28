@@ -1,29 +1,39 @@
 {
   "name": "advanced-build-system",
-  "version": "1.0.0",
-  "description": "Advanced CSS & JavaScript build system with comprehensive tooling",
+  "version": "2.0.0",
+  "description": "Advanced CSS, JavaScript & HTML build system with comprehensive tooling and CLI interface",
   "main": "index.js",
+  "bin": {
+    "build": "./cli.js"
+  },
   "scripts": {
-    "build": "npm run build:css && npm run build:js",
+    "setup": "./setup.sh",
+    "build": "npm run build:css && npm run build:js && npm run build:html",
     "build:css": "node css-builder.js build",
-    "build:js": "node js-builder.js build",
-    "build:production": "npm run build:css:production && npm run build:js:production",
+    "build:js": "node js-builder.js build", 
+    "build:html": "node html-builder.js build",
+    "build:all": "npm run build",
+    "build:production": "npm run build:css:production && npm run build:js:production && npm run build:html:production",
     "build:css:production": "node css-builder.js build --purge --no-maps",
     "build:js:production": "node js-builder.js build --production",
-    "watch": "npm run watch:css & npm run watch:js",
+    "build:html:production": "node html-builder.js build --obfuscate --no-maps",
+    "watch": "npm run watch:css & npm run watch:js & npm run watch:html",
     "watch:css": "node css-builder.js watch",
     "watch:js": "node js-builder.js watch",
+    "watch:html": "node html-builder.js watch",
     "bundle": "node js-builder.js bundle --production",
     "bundle:dev": "node js-builder.js bundle",
     "bundle:watch": "node js-builder.js watch --bundle",
     "analyze": "node js-builder.js analyze",
     "dev": "npm run watch",
     "clean": "rimraf dist/*",
+    "cli": "node cli.js",
+    "start": "node cli.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "postcss": "^8.4.31",
-    "cssnano": "^6.0.1",
+    "cssnano": "^6.0.1", 
     "autoprefixer": "^10.4.16",
     "terser": "^5.24.0",
     "@babel/core": "^7.23.3",
@@ -38,23 +48,27 @@
     "rollup": "^4.5.0",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-commonjs": "^25.0.7",
-    "@rollup/plugin-replace": "^5.0.5",
+    "@rollup/plugin-replace": "^5.0.5", 
     "chokidar": "^3.5.3",
     "rimraf": "^5.0.5"
   },
   "keywords": [
     "css",
     "javascript",
+    "html",
     "build",
     "minification",
+    "obfuscation",
     "postcss",
-    "autoprefixer",
+    "autoprefixer", 
     "purgecss",
     "babel",
     "terser",
     "rollup",
     "bundler",
-    "build-system"
+    "build-system",
+    "cli",
+    "development-tools"
   ],
   "author": "VIKRI AHPAD TANTOWI",
   "license": "MIT",
@@ -69,5 +83,14 @@
   "bugs": {
     "url": "https://github.com/MeViksry/advanced-build-system/issues"
   },
-  "homepage": "https://github.com/MeViksry/advanced-build-system#readme"
+  "homepage": "https://github.com/MeViksry/advanced-build-system#readme",
+  "files": [
+    "*.js",
+    "css/",
+    "js/",
+    "dist/",
+    "setup.sh",
+    "README.md",
+    "LICENSE"
+  ]
 }
