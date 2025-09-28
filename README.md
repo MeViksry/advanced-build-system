@@ -1,5 +1,7 @@
 # 🚀 Advanced Build System
 
+**Professional-grade CSS & JavaScript build system with modern tooling**
+
 <div align="center">
 
 ![Build System Banner](https://img.shields.io/badge/Build_System-Advanced-blue?style=for-the-badge&logo=webpack)
@@ -7,8 +9,6 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 ![Node](https://img.shields.io/badge/Node.js-%3E%3D14.0.0-brightgreen?style=for-the-badge&logo=node.js)
 ![Made with Love](https://img.shields.io/badge/Made_with-Viksry-red?style=for-the-badge)
-
-**Professional-grade CSS & JavaScript build system with modern tooling**
 
 </div>
 
