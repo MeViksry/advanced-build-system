@@ -6,13 +6,9 @@
 ![Version](https://img.shields.io/badge/Version-1.0.0-green?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 ![Node](https://img.shields.io/badge/Node.js-%3E%3D14.0.0-brightgreen?style=for-the-badge&logo=node.js)
-![Made with Love](https://img.shields.io/badge/Made_with-❤️-red?style=for-the-badge)
+![Made with Love](https://img.shields.io/badge/Made_with-Viksry-red?style=for-the-badge)
 
 **Professional-grade CSS & JavaScript build system with modern tooling**
-
-[![GitHub Stars](https://img.shields.io/github/stars/MeViksry/advanced-build-system?style=social)](https://github.com/MeViksry/advanced-build-system)
-[![GitHub Forks](https://img.shields.io/github/forks/MeViksry/advanced-build-system?style=social)](https://github.com/MeViksry/advanced-build-system)
-[![GitHub Issues](https://img.shields.io/github/issues/MeViksry/advanced-build-system?style=social)](https://github.com/MeViksry/advanced-build-system/issues)
 
 </div>
 
