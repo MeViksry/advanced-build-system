@@ -82,7 +82,7 @@
 
 ```bash
 # Clone or download the project
-git clone https://github.com/MeViksry/advanced-build-system
+git clone https://github.com/MeViksry/advanced-build-system.git
 cd advanced-build-system
 
 # Run automated setup (installs dependencies and creates template files)
