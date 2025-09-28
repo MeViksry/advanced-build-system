@@ -837,7 +837,7 @@ When reporting issues, please include:
 
 <div align="center">
 
-**Made with ❤️ by [VIKRI AHPAD TANTOWI](https://github.com/vikri-ahpad-tantowi)**
+**Made with ❤️ by [VIKRI AHPAD TANTOWI](https://github.com/MeViksry)**
 
 *Building the future, one build at a time* 🚀
 
