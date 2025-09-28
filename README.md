@@ -1,5 +1,4 @@
 # 🚀 Advanced Build System
-**Professional-grade CSS & JavaScript build system with modern tooling**
 
 <div align="center">
 
