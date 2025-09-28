@@ -831,9 +831,9 @@ When reporting issues, please include:
 
 **⭐ If this project helped you, please give it a star!**
 
-<a href="https://github.com/vikri-ahpad-tantowi/advanced-build-system">
-  <img src="https://img.shields.io/github/stars/vikri-ahpad-tantowi/advanced-build-system?style=social" alt="GitHub Stars">
-</a>
+[![GitHub Stars](https://img.shields.io/github/stars/MeViksry/advanced-build-system?style=social)](https://github.com/MeViksry/advanced-build-system)
+[![GitHub Forks](https://img.shields.io/github/forks/MeViksry/advanced-build-system?style=social)](https://github.com/MeViksry/advanced-build-system)
+[![GitHub Issues](https://img.shields.io/github/issues/MeViksry/advanced-build-system?style=social)](https://github.com/MeViksry/advanced-build-system/issues)
 
 ---
 
